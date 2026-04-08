@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import type { ShipsResponse } from "@/lib/types";
 
 const CENTER: L.LatLngExpression = [26.6, 56.5];
 const ZOOM = 9;
@@ -36,6 +37,7 @@ export default function Map() {
       maxZoom: 11,
     });
 
+    let cancelled = false;
     leafletMap.current = map;
 
     L.tileLayer(
@@ -55,7 +57,39 @@ export default function Map() {
         .addTo(map);
     });
 
+    // Fetch and render ships
+    fetch("/api/ships")
+      .then((res) => res.json())
+      .then((data: ShipsResponse) => {
+        if (cancelled) return;
+
+        data.ships.forEach((ship) => {
+          const heading = ship.heading ?? 0;
+          const marker = L.marker([ship.lat, ship.lng], {
+            icon: L.divIcon({
+              className: "ship-marker",
+              html: `<svg width="12" height="12" viewBox="0 0 12 12" style="transform:rotate(${heading}deg)"><polygon points="6,1 10,10 6,8 2,10" fill="#e2b553" fill-opacity="0.9" stroke="#000" stroke-width="0.5"/></svg>`,
+              iconSize: [12, 12],
+              iconAnchor: [6, 6],
+            }),
+            interactive: true,
+          });
+
+          if (ship.name) {
+            marker.bindTooltip(ship.name, {
+              className: "ship-tooltip",
+              direction: "top",
+              offset: [0, -8],
+            });
+          }
+
+          marker.addTo(map);
+        });
+      })
+      .catch(console.error);
+
     return () => {
+      cancelled = true;
       map.remove();
       leafletMap.current = null;
     };

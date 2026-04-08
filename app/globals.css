@@ -36,7 +36,51 @@ html, body, #__next, .leaflet-tile-pane {
   display: none !important;
 }
 
-/* Hide Leaflet attribution */
+/* Ship markers */
+.ship-marker {
+  background: none !important;
+  border: none !important;
+}
+
+/* Ship tooltips */
+.ship-tooltip {
+  background: rgba(20, 25, 35, 0.9) !important;
+  color: #e2b553 !important;
+  border: 1px solid rgba(226, 181, 83, 0.3) !important;
+  font-size: 10px !important;
+  font-weight: 500;
+  padding: 3px 8px !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+}
+
+.ship-tooltip::before {
+  border-top-color: rgba(20, 25, 35, 0.9) !important;
+}
+
+/* Hide Leaflet attribution bar for cleaner look */
 .leaflet-control-attribution {
   display: none !important;
+}
+
+/* Style zoom controls */
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+}
+
+.leaflet-control-zoom a {
+  background: rgba(20, 25, 35, 0.85) !important;
+  color: #8899aa !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(8px);
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  font-size: 18px !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: rgba(30, 38, 50, 0.95) !important;
+  color: #ccd6e0 !important;
 }
