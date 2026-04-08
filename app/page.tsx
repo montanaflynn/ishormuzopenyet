@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import type { StraitStatus, DailyTransit } from "@/lib/portwatch";
+import type { StraitStatus, DailyTransit, PolymarketOdds } from "@/lib/portwatch";
 
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
 
@@ -40,11 +40,11 @@ function DayInfo({ day }: { day: DailyTransit }) {
   }
 
   return (
-    <div style={{ textAlign: "center" }}>
-      <div className="text-white/40 text-sm">
-        {day.total} transits on {day.date}
+    <div>
+      <div className="text-white/60 text-xs">
+        {day.total} crossings on {day.date}
       </div>
-      <div className="flex justify-center gap-x-4 text-[11px] text-white/35 mt-2" style={{ minHeight: 18 }}>
+      <div className="flex gap-x-4 text-[11px] text-white/35 mt-2" style={{ minHeight: 18 }}>
         {day.total === 0 ? (
           <span>No ships</span>
         ) : (
@@ -94,17 +94,81 @@ function MiniChart({
   );
 }
 
+function PredictionMarket({ odds }: { odds: PolymarketOdds }) {
+  const pct = Math.round(odds.yesPrice * 100);
+  const endMonth = new Date(odds.endDate).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+  const signal = pct >= 75;
+
+  return (
+    <a
+      href={odds.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block group"
+    >
+      <div className="mb-3">
+        <span className="text-[11px] text-white/40 uppercase tracking-wide font-medium group-hover:text-white/60 transition-colors">
+          Prediction Market <span className="normal-case text-white/25 font-normal group-hover:text-white/40 transition-colors">via Polymarket</span>
+        </span>
+      </div>
+      <div className="flex items-center gap-3">
+        <span
+          className={`text-2xl font-bold tabular-nums ${
+            signal ? "text-green-400" : "text-red-400"
+          }`}
+        >
+          {pct}%
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="text-white/60 text-xs leading-tight">
+            chance traffic normalizes by {endMonth}
+          </div>
+          <div className="text-white/25 text-[10px] mt-0.5">
+            ${odds.volume.toLocaleString()} vol
+          </div>
+        </div>
+      </div>
+      {/* Progress bar */}
+      <div
+        className="mt-2 rounded-full overflow-hidden"
+        style={{ height: 3, background: "rgba(255,255,255,0.06)" }}
+      >
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${pct}%`,
+            background: signal
+              ? "rgba(74, 222, 128, 0.6)"
+              : "rgba(239, 68, 68, 0.5)",
+          }}
+        />
+      </div>
+    </a>
+  );
+}
+
 export default function Home() {
   const [status, setStatus] = useState<StraitStatus | null>(null);
   const [expanded, setExpanded] = useState(true);
   const [hoveredDay, setHoveredDay] = useState<DailyTransit | null>(null);
+
+  // Polymarket odds override isOpen when available (75% threshold)
+  const isOpen = status?.polymarket
+    ? status.polymarket.yesPrice >= 0.75
+    : status?.isOpen ?? false;
 
   useEffect(() => {
     fetch("/api/status")
       .then((res) => res.json())
       .then((data: StraitStatus) => {
         setStatus(data);
-        setFavicon(data.isOpen);
+        const open = data.polymarket
+          ? data.polymarket.yesPrice >= 0.75
+          : data.isOpen;
+        setFavicon(open);
       })
       .catch(console.error);
   }, []);
@@ -123,17 +187,17 @@ export default function Home() {
             >
               <span
                 className={`text-5xl font-black tracking-tight leading-none ${
-                  status.isOpen ? "text-green-400" : "text-red-500"
+                  isOpen ? "text-green-400" : "text-red-500"
                 }`}
               >
-                {status.isOpen ? "YES" : "NO"}
+                {isOpen ? "YES" : "NO"}
               </span>
               <div className="flex flex-col">
                 <span className="text-white/60 text-sm font-medium leading-tight">
                   The Strait of Hormuz
                 </span>
                 <span className="text-white/40 text-sm leading-tight">
-                  is {status.isOpen ? "open" : "effectively closed"}<sup>*</sup>
+                  is {isOpen ? "open" : "effectively closed"}<sup>*</sup>
                 </span>
               </div>
               <span
@@ -145,11 +209,28 @@ export default function Home() {
             </div>
 
             {expanded && <>
-            {/* Divider */}
-            <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }} />
+            {/* Prediction Market — primary signal */}
+            {status.polymarket && <>
+              <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }} />
+              <PredictionMarket odds={status.polymarket} />
+            </>}
+
+            {/* Crossing Data */}
+            <div>
+              <a
+                href="https://portwatch.imf.org/pages/chokepoint6"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group text-[11px] text-white/40 uppercase tracking-wide font-medium hover:text-white/60 transition-colors"
+              >
+                Crossing Data <span className="normal-case text-white/25 font-normal group-hover:text-white/40 transition-colors">via IMF PortWatch</span>
+              </a>
+            </div>
 
             {/* Day info — shows hovered day or latest */}
-            <DayInfo day={hoveredDay ?? status.latest} />
+            <div style={{ marginTop: -12 }}>
+              <DayInfo day={hoveredDay ?? status.latest} />
+            </div>
 
             {/* Chart */}
             <div style={{ overflow: "hidden" }}>
@@ -165,9 +246,9 @@ export default function Home() {
             {/* Averages */}
             <div className="flex justify-center gap-8">
               {[
-                { label: "7d avg", value: status.avgLast7 },
-                { label: "30d avg", value: status.avgLast30 },
-                { label: "90d avg", value: status.avgLast90 },
+                { label: "Last 7d avg", value: status.avgLast7 },
+                { label: "Last 30d avg", value: status.avgLast30 },
+                { label: "Last 90d avg", value: status.avgLast90 },
               ].map((item) => {
                 const pctChange = status.avgLast365 > 0
                   ? ((item.value - status.avgLast365) / status.avgLast365) * 100
@@ -193,19 +274,18 @@ export default function Home() {
               })}
             </div>
 
-            <div className="text-[10px] text-white/40 text-center leading-relaxed">
+            <div className="text-[11px] text-white/40 uppercase tracking-wide font-medium">
+              Disclaimer
+            </div>
+            <div className="text-[11px] text-white/40 leading-relaxed" style={{ marginTop: -12 }}>
               <sup>*</sup>I built this as a fun side project, please
               don&apos;t rely on it for anything serious. Crossing data
               lags ~4 days and ship positions on the map
               are cached, not live. The data is from public sources and I
-              make no guarantees on its accuracy or timeliness.
+              make no guarantees on its accuracy.
             </div>
 
             <div className="text-center text-[10px] text-white/40">
-              <a href="https://portwatch.imf.org/pages/chokepoint6" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 hover:underline transition-colors">Crossing Data</a>
-              {" "}&middot;{" "}
-              <a href="https://www.marinetraffic.com/" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 hover:underline transition-colors">Ship Data</a>
-              {" "}&middot;{" "}
               <a href="https://github.com/montanaflynn/ishormuzopenyet" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 hover:underline transition-colors">GitHub Repo</a>
               {" "}&middot;{" "}
               By <a href="https://x.com/montanaflynn" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 hover:underline transition-colors">@montanaflynn</a>
