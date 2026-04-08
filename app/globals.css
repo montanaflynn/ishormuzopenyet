@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #__next, .leaflet-tile-pane {
+  height: 100%;
+  width: 100%;
+  background: #1a1a1a !important;
+}
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  background: #1a1a1a !important;
+}
+
+/* Country labels */
+.country-label {
+  color: rgba(255, 255, 255, 0.35) !important;
+  font-size: 9px !important;
+  font-weight: 500;
+  letter-spacing: 0.25em;
+  white-space: nowrap;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.country-label::before {
+  display: none !important;
+}
+
+/* Hide Leaflet attribution */
+.leaflet-control-attribution {
+  display: none !important;
+}
