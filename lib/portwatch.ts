@@ -9,6 +9,15 @@ export interface DailyTransit {
   capacity: number;
 }
 
+export interface PolymarketOdds {
+  question: string;
+  yesPrice: number;
+  volume: number;
+  slug: string;
+  endDate: string;
+  url: string;
+}
+
 export interface StraitStatus {
   isOpen: boolean;
   latest: DailyTransit;
@@ -18,6 +27,7 @@ export interface StraitStatus {
   avgLast90: number;
   avgLast365: number;
   lastUpdated: string;
+  polymarket?: PolymarketOdds | null;
 }
 
 const ARCGIS_URL =
