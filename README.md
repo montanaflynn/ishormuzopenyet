@@ -11,7 +11,7 @@ A dark map centered on the strait shows cached ship positions, and an overlay ca
 ## Data Sources
 
 - **IMF PortWatch** (primary) — Daily chokepoint transit data from the [ArcGIS FeatureServer](https://services9.arcgis.com/weJ1QsnbMYJlCHdG/arcgis/rest/services/Daily_Chokepoints_Data/FeatureServer/0). Provides daily counts of container, dry bulk, general cargo, RoRo, and tanker transits. Data goes back to 2018. Updated daily with a ~4 day processing lag. The Strait of Hormuz is `chokepoint6`.
-- **MarineTraffic** (cached) — Ship position data (lat/lng, heading, speed, name) stored in `data/sample-marinetraffic.json` for map visualization. Not live — manually captured sample data.
+- **MarineTraffic** (cached) — 223 ship positions (lat/lng, heading, speed, name) manually captured from [MarineTraffic](https://www.marinetraffic.com) and stored in `data/sample-marinetraffic.json`. Not live — if you have access to a real-time AIS data feed or want to sponsor one, contributions welcome!
 - **CartoDB** — Dark basemap tiles (`dark_nolabels` variant) for the map background.
 
 ## Tech Stack

@@ -8,19 +8,6 @@ import type { ShipsResponse } from "@/lib/types";
 const CENTER: L.LatLngExpression = [26.6, 56.5];
 const ZOOM = 9;
 
-const COUNTRIES = [
-  { name: "IRAN", lat: 27.5, lng: 56.5 },
-  { name: "OMAN", lat: 26.1, lng: 56.3 },
-  { name: "UAE", lat: 24.0, lng: 54.5 },
-  { name: "SAUDI ARABIA", lat: 24.5, lng: 44.5 },
-  { name: "QATAR", lat: 25.3, lng: 51.2 },
-  { name: "BAHRAIN", lat: 26.05, lng: 50.55 },
-  { name: "KUWAIT", lat: 29.5, lng: 47.2 },
-  { name: "IRAQ", lat: 33.0, lng: 44.0 },
-  { name: "PAKISTAN", lat: 25.8, lng: 63.5 },
-  { name: "YEMEN", lat: 15.5, lng: 47.5 },
-];
-
 export default function Map() {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<L.Map | null>(null);
@@ -40,10 +27,25 @@ export default function Map() {
     let cancelled = false;
     leafletMap.current = map;
 
+    // CartoDB Dark Matter — no labels
     L.tileLayer(
       "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
       { subdomains: "abcd" }
     ).addTo(map);
+
+    // Country labels
+    const COUNTRIES = [
+      { name: "IRAN", lat: 27.5, lng: 56.5 },
+      { name: "OMAN", lat: 26.1, lng: 56.3 },
+      { name: "UAE", lat: 24.0, lng: 54.5 },
+      { name: "SAUDI ARABIA", lat: 24.5, lng: 44.5 },
+      { name: "QATAR", lat: 25.3, lng: 51.2 },
+      { name: "BAHRAIN", lat: 26.05, lng: 50.55 },
+      { name: "KUWAIT", lat: 29.5, lng: 47.2 },
+      { name: "IRAQ", lat: 33.0, lng: 44.0 },
+      { name: "PAKISTAN", lat: 25.8, lng: 63.5 },
+      { name: "YEMEN", lat: 15.5, lng: 47.5 },
+    ];
 
     COUNTRIES.forEach(({ name, lat, lng }) => {
       L.tooltip({
@@ -85,6 +87,7 @@ export default function Map() {
 
           marker.addTo(map);
         });
+
       })
       .catch(console.error);
 
