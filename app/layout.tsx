@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Is the Strait of Hormuz Open Yet?",
+  title: "Is Hormuz Open Yet?",
   description: "Live status of the Strait of Hormuz",
 };
 

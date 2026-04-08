@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { ShipsResponse } from "@/lib/types";
+import type { Ship } from "@/lib/types";
 
 const CENTER: L.LatLngExpression = [26.6, 56.5];
 const ZOOM = 9;
@@ -59,13 +59,25 @@ export default function Map() {
         .addTo(map);
     });
 
-    // Fetch and render ships
-    fetch("/api/ships")
+    // Fetch and render ships (static file, no serverless function)
+    fetch("/data/sample-marinetraffic.json")
       .then((res) => res.json())
-      .then((data: ShipsResponse) => {
+      .then((raw: { data: { rows: Record<string, string | null>[] } }) => {
         if (cancelled) return;
 
-        data.ships.forEach((ship) => {
+        const ships: Ship[] = raw.data.rows
+          .filter((r) => r.LAT && r.LON && !r.SHIPNAME?.includes("[SAT-AIS]"))
+          .map((r) => ({
+            mmsi: 0,
+            name: r.SHIPNAME ?? "",
+            lat: parseFloat(r.LAT!),
+            lng: parseFloat(r.LON!),
+            heading: r.HEADING ? parseInt(r.HEADING) : r.COURSE ? parseInt(r.COURSE) / 10 : 0,
+            speed: r.SPEED ? parseInt(r.SPEED) / 10 : 0,
+            timestamp: new Date().toISOString(),
+          }));
+
+        ships.forEach((ship) => {
           const heading = ship.heading ?? 0;
           const marker = L.marker([ship.lat, ship.lng], {
             icon: L.divIcon({

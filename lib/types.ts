@@ -7,9 +7,3 @@ export interface Ship {
   speed: number;
   timestamp: string;
 }
-
-export interface ShipsResponse {
-  ships: Ship[];
-  isOpen: boolean;
-  lastUpdated: string;
-}

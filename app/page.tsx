@@ -203,6 +203,15 @@ export default function Home() {
               >
                 IMF PortWatch
               </a>
+              {" "}&middot;{" "}
+              <a
+                href="https://github.com/montanaflynn/ishormuzopenyet"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white/50 hover:underline transition-colors"
+              >
+                GitHub
+              </a>
             </div>
             </>}
           </div>
