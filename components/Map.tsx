@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Ship } from "@/lib/types";
+import { SHIP_TYPE_LABELS, FLAG_NAMES } from "@/lib/types";
 
 const CENTER: L.LatLngExpression = [26.6, 56.5];
 const ZOOM = 9;
@@ -62,8 +63,12 @@ export default function Map() {
     // Fetch and render ships (static file, no serverless function)
     fetch("/data/sample-marinetraffic.json")
       .then((res) => res.json())
-      .then((raw: { data: { rows: Record<string, string | null>[] } }) => {
+      .then((raw: { capturedAt?: string; data: { rows: Record<string, string | null>[] } }) => {
         if (cancelled) return;
+
+        const capturedLabel = raw.capturedAt
+          ? new Date(raw.capturedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "UTC", timeZoneName: "short" })
+          : null;
 
         const ships: Ship[] = raw.data.rows
           .filter((r) => r.LAT && r.LON && !r.SHIPNAME?.includes("[SAT-AIS]"))
@@ -75,7 +80,14 @@ export default function Map() {
             heading: r.HEADING ? parseInt(r.HEADING) : r.COURSE ? parseInt(r.COURSE) / 10 : 0,
             speed: r.SPEED ? parseInt(r.SPEED) / 10 : 0,
             timestamp: new Date().toISOString(),
+            flag: r.FLAG ?? undefined,
+            destination: r.DESTINATION ?? undefined,
+            length: r.LENGTH ? parseInt(r.LENGTH) : undefined,
+            width: r.WIDTH ? parseInt(r.WIDTH) : undefined,
+            shipType: r.SHIPTYPE ?? undefined,
           }));
+
+        let pinnedMarker: L.Marker | null = null;
 
         ships.forEach((ship) => {
           const heading = ship.heading ?? 0;
@@ -89,12 +101,64 @@ export default function Map() {
             interactive: true,
           });
 
-          if (ship.name) {
-            marker.bindTooltip(ship.name, {
-              className: "ship-tooltip",
-              direction: "top",
-              offset: [0, -8],
-            });
+          {
+            const flagName = ship.flag && ship.flag !== "--" ? (FLAG_NAMES[ship.flag] ?? ship.flag) : null;
+            const typeName = ship.shipType ? (SHIP_TYPE_LABELS[ship.shipType] ?? "Vessel") : null;
+            const speedKnots = ship.speed.toFixed(1);
+
+            const rows: string[] = [];
+            if (ship.name) rows.push(`<div class="ship-tip-name">${ship.name}</div>`);
+
+            if (typeName) rows.push(`<div class="ship-tip-meta">Ship Type: ${typeName}</div>`);
+            if (flagName) rows.push(`<div class="ship-tip-meta">Flag State: ${flagName}</div>`);
+
+            const details: string[] = [];
+            if (ship.speed > 0) details.push(`Speed: ${speedKnots} kn`);
+            if (ship.length && ship.width) details.push(`Size: ${ship.length}m by ${ship.width}m`);
+            if (details.length) rows.push(`<div class="ship-tip-details">${details.join("<br/>")}</div>`);
+
+            const mtLink = `<a href="https://www.marinetraffic.com/en/ais/home/centerx:57.4/centery:26.4/zoom:8" target="_blank" rel="noopener noreferrer">MarineTraffic</a>`;
+            const mtLabel = capturedLabel ? `Data from ${mtLink} on ${capturedLabel}` : `Data from ${mtLink}`;
+            if (mtLabel) rows.push(`<div class="ship-tip-elapsed">${mtLabel}</div>`);
+
+            if (rows.length) {
+              const content = rows.join("");
+
+              marker.bindTooltip(content, {
+                className: "ship-tooltip-rich",
+                direction: "top",
+                offset: [0, -8],
+              });
+
+              marker.bindPopup(content, {
+                className: "ship-popup-rich",
+                closeButton: true,
+                offset: [0, -8],
+                maxWidth: 220,
+              });
+
+              marker.on("mouseover", () => {
+                if (!pinnedMarker) marker.openTooltip();
+              });
+
+              marker.on("mouseout", () => {
+                if (pinnedMarker !== marker) marker.closeTooltip();
+              });
+
+              marker.on("click", () => {
+                // close previous pinned popup
+                if (pinnedMarker && pinnedMarker !== marker) {
+                  pinnedMarker.closePopup();
+                }
+                marker.closeTooltip();
+                pinnedMarker = marker;
+                marker.openPopup();
+              });
+
+              marker.on("popupclose", () => {
+                if (pinnedMarker === marker) pinnedMarker = null;
+              });
+            }
           }
 
           marker.addTo(map);

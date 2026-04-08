@@ -43,19 +43,88 @@ html, body, #__next, .leaflet-tile-pane {
 }
 
 /* Ship tooltips */
-.ship-tooltip {
-  background: rgba(20, 25, 35, 0.9) !important;
-  color: #e2b553 !important;
-  border: 1px solid rgba(226, 181, 83, 0.3) !important;
-  font-size: 10px !important;
-  font-weight: 500;
-  padding: 3px 8px !important;
-  border-radius: 4px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+.ship-tooltip-rich {
+  background: rgba(20, 25, 35, 0.92) !important;
+  color: #ccc !important;
+  border: 1px solid rgba(226, 181, 83, 0.25) !important;
+  font-size: 11px !important;
+  padding: 8px 10px !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+  line-height: 1.5 !important;
+  max-width: 220px !important;
 }
 
-.ship-tooltip::before {
-  border-top-color: rgba(20, 25, 35, 0.9) !important;
+.ship-tooltip-rich::before {
+  border-top-color: rgba(20, 25, 35, 0.92) !important;
+}
+
+.ship-tip-name {
+  color: #e2b553;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.ship-tip-meta {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 10px;
+}
+
+.ship-tip-details {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 10px;
+}
+
+.ship-tip-dest {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 10px;
+  font-style: italic;
+}
+
+.ship-tip-elapsed {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 9px;
+  margin-top: 2px;
+}
+
+.ship-tip-elapsed a {
+  color: rgba(226, 181, 83, 0.6);
+  text-decoration: none;
+}
+
+.ship-tip-elapsed a:hover {
+  color: #e2b553;
+  text-decoration: underline;
+}
+
+/* Ship popup (pinned on click) */
+.ship-popup-rich .leaflet-popup-content-wrapper {
+  background: rgba(20, 25, 35, 0.95) !important;
+  color: #ccc !important;
+  border: 1px solid rgba(226, 181, 83, 0.25) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+  padding: 0 !important;
+}
+
+.ship-popup-rich .leaflet-popup-content {
+  margin: 8px 10px !important;
+  font-size: 11px !important;
+  line-height: 1.5 !important;
+}
+
+.ship-popup-rich .leaflet-popup-tip {
+  background: rgba(20, 25, 35, 0.95) !important;
+}
+
+.ship-popup-rich .leaflet-popup-close-button {
+  color: rgba(255, 255, 255, 0.4) !important;
+  font-size: 16px !important;
+  padding: 4px 6px 0 0 !important;
+}
+
+.ship-popup-rich .leaflet-popup-close-button:hover {
+  color: #e2b553 !important;
 }
 
 /* Hide Leaflet attribution bar for cleaner look */

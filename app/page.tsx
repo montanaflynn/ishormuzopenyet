@@ -42,7 +42,7 @@ function DayInfo({ day }: { day: DailyTransit }) {
   return (
     <div style={{ textAlign: "center" }}>
       <div className="text-white/40 text-sm">
-        {day.total} transits on {day.date}<sup>*</sup>
+        {day.total} transits on {day.date}
       </div>
       <div className="flex justify-center gap-x-4 text-[11px] text-white/35 mt-2" style={{ minHeight: 18 }}>
         {day.total === 0 ? (
@@ -133,7 +133,7 @@ export default function Home() {
                   The Strait of Hormuz
                 </span>
                 <span className="text-white/40 text-sm leading-tight">
-                  is {status.isOpen ? "open" : "effectively closed"}
+                  is {status.isOpen ? "open" : "effectively closed"}<sup>*</sup>
                 </span>
               </div>
               <span
@@ -202,7 +202,9 @@ export default function Home() {
             </div>
 
             <div className="text-center text-[10px] text-white/40">
-              <a href="https://portwatch.imf.org/pages/chokepoint6" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 hover:underline transition-colors">Data Source</a>
+              <a href="https://portwatch.imf.org/pages/chokepoint6" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 hover:underline transition-colors">Crossing Data</a>
+              {" "}&middot;{" "}
+              <a href="https://www.marinetraffic.com/" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 hover:underline transition-colors">Ship Data</a>
               {" "}&middot;{" "}
               <a href="https://github.com/montanaflynn/ishormuzopenyet" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 hover:underline transition-colors">GitHub Repo</a>
               {" "}&middot;{" "}
