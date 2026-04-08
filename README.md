@@ -2,7 +2,10 @@
 
 [ishormuzopenyet.com](https://ishormuzopenyet.com)
 
-A real-time status page showing whether the Strait of Hormuz is open for maritime traffic, based on daily transit data from the IMF PortWatch platform.
+A status page showing whether the Strait of Hormuz is open for maritime traffic, based on daily transit data from the IMF PortWatch platform.
+
+> [!WARNING]
+> This is a fun side project and should not be relied upon for any decision-making. The underlying data is based on public AIS signals, which are inherently incomplete — [many ships deliberately switch off their AIS transponders to avoid detection](https://www.bbc.com/news/articles/c4geg0eeyjeo). Actual transit volumes may be higher than reported.
 
 ## How It Works
 

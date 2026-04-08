@@ -42,7 +42,7 @@ function DayInfo({ day }: { day: DailyTransit }) {
   return (
     <div style={{ textAlign: "center" }}>
       <div className="text-white/40 text-sm">
-        {day.total} transits on {day.date}
+        {day.total} transits on {day.date}<sup>*</sup>
       </div>
       <div className="flex justify-center gap-x-4 text-[11px] text-white/35 mt-2" style={{ minHeight: 18 }}>
         {day.total === 0 ? (
@@ -193,25 +193,20 @@ export default function Home() {
               })}
             </div>
 
-            <div className="text-center text-[10px] text-white/20">
-              Source:{" "}
-              <a
-                href="https://portwatch.imf.org/pages/chokepoint6"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-white/50 hover:underline transition-colors"
-              >
-                IMF PortWatch
-              </a>
+            <div className="text-[10px] text-white/40 text-center leading-relaxed">
+              <sup>*</sup>I built this as a fun side project, please
+              don&apos;t rely on it for anything serious. Crossing data
+              lags ~4 days and ship positions on the map
+              are cached, not live. The data is from public sources and I
+              make no guarantees on its accuracy or timeliness.
+            </div>
+
+            <div className="text-center text-[10px] text-white/40">
+              <a href="https://portwatch.imf.org/pages/chokepoint6" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 hover:underline transition-colors">Data Source</a>
               {" "}&middot;{" "}
-              <a
-                href="https://github.com/montanaflynn/ishormuzopenyet"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-white/50 hover:underline transition-colors"
-              >
-                GitHub
-              </a>
+              <a href="https://github.com/montanaflynn/ishormuzopenyet" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 hover:underline transition-colors">GitHub Repo</a>
+              {" "}&middot;{" "}
+              By <a href="https://x.com/montanaflynn" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 hover:underline transition-colors">@montanaflynn</a>
             </div>
             </>}
           </div>
