@@ -63,6 +63,39 @@ export default function Map() {
         .addTo(map);
     });
 
+    // Strait boundary lines — 3 parallel lines, ~10° rotation from N-S
+    const straitCenter: L.LatLngExpression = [26.7762, 56.5613];
+    const outerLineStyle: L.PolylineOptions = {
+      color: "#ff4444",
+      weight: 1.5,
+      opacity: 0.5,
+    };
+    const centerLineStyle: L.PolylineOptions = {
+      color: "#ffffff",
+      weight: 1.5,
+      opacity: 0.5,
+    };
+
+    // Center line (from GeoJSON)
+    L.polyline(
+      [[26.7860, 56.3559], [26.4312, 56.3580]],
+      centerLineStyle
+    ).addTo(map);
+
+    // Outer line east (parallel, offset ~0.05 lng)
+    L.polyline(
+      [[26.7860, 56.4061], [26.4312, 56.4078]],
+      outerLineStyle
+    ).addTo(map);
+
+    // Outer line west (parallel, offset ~0.05 lng)
+    L.polyline(
+      [[26.7860, 56.3061], [26.4312, 56.3078]],
+      outerLineStyle
+    ).addTo(map);
+
+
+
     // Fetch and render ships (static file, no serverless function)
     fetch("/data/sample-marinetraffic.json")
       .then((res) => res.json())
