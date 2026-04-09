@@ -15,19 +15,30 @@ A dark map centered on the strait shows cached ship positions, and an overlay ca
 
 ## Data Sources
 
-- **[Polymarket](https://polymarket.com/predictions/strait-of-hormuz)** (primary) — Prediction market odds for Strait of Hormuz traffic normalization via the [Gamma API](https://gamma-api.polymarket.com). Markets resolve based on IMF PortWatch 7-day moving average reaching 60+ transit calls. Uses the nearest active monthly market (April until May, then May).
-- **[IMF PortWatch](https://portwatch.imf.org/pages/chokepoint6)** — Daily chokepoint transit data from the [ArcGIS FeatureServer](https://services9.arcgis.com/weJ1QsnbMYJlCHdG/arcgis/rest/services/Daily_Chokepoints_Data/FeatureServer/0). Provides daily counts of container, dry bulk, general cargo, RoRo, and tanker crossings. Updated daily with a ~4 day processing lag. The Strait of Hormuz is `chokepoint6`.
-- **CartoDB** — Dark basemap tiles (`dark_nolabels` variant) for the map background.
-- **MarineTraffic** (cached) — Ship positions (lat/lng, heading, speed, name) manually captured from [MarineTraffic](https://www.marinetraffic.com) and served as a static file. Not live.
+## [Polymarket](https://polymarket.com/predictions/strait-of-hormuz)
 
-**Note:** The ship positions on the map are currently static sample data. Live AIS tracking APIs exist but are expensive. If you'd like to help sponsor a real-time data feed, please [open an issue](https://github.com/montanaflynn/ishormuzopenyet/issues) or reach out via the email on my [GitHub profile](https://github.com/montanaflynn).
+Prediction market odds for Strait of Hormuz traffic normalization via the [Gamma API](https://gamma-api.polymarket.com). Markets resolve based on IMF PortWatch 7-day moving average reaching 60+ transit calls. Uses the nearest active monthly market (April until May, then May).
+
+## [IMF PortWatch](https://portwatch.imf.org/pages/chokepoint6)
+
+Daily chokepoint transit data from the [ArcGIS FeatureServer](https://services9.arcgis.com/weJ1QsnbMYJlCHdG/arcgis/rest/services/Daily_Chokepoints_Data/FeatureServer/0). Provides daily counts of container, dry bulk, general cargo, RoRo, and tanker crossings. Updated daily with a ~4 day processing lag. The Strait of Hormuz is `chokepoint6`.
+
+## [CartoDB](https://carto.com/basemaps)
+
+Dark basemap tiles (`dark_nolabels` variant) for the map background.
+
+## [MarineTraffic](https://www.marinetraffic.com)
+
+Ship positions (lat/lng, heading, speed, name) manually captured and served as a static file. Not live.
+
+> [!NOTE]
+> Live AIS tracking APIs exist but are expensive. If you'd like to help sponsor a real-time data feed, please [open an issue](https://github.com/montanaflynn/ishormuzopenyet/issues) or reach out via the email on my [GitHub profile](https://github.com/montanaflynn).
 
 ## Tech Stack
 
-- **Next.js 16** with App Router
-- **Leaflet** for the interactive map
-- **Tailwind CSS** for styling
-- **IMF PortWatch ArcGIS API** for transit data (no API key required)
+- **[Next.js 16](https://nextjs.org)** with App Router
+- **[Leaflet](https://leafletjs.com)** for the interactive map
+- **[Tailwind CSS](https://tailwindcss.com)** for styling
 
 ## Running Locally
 
