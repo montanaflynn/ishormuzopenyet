@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStraitStatus } from "@/lib/portwatch";
 import { getPolymarketOdds } from "@/lib/polymarket";
+import { getWindwardData } from "@/lib/windward";
 
 export async function GET() {
   try {
@@ -8,9 +9,15 @@ export async function GET() {
       getStraitStatus(),
       getPolymarketOdds(),
     ]);
-    return NextResponse.json({ ...status, polymarket }, {
+    const windward = getWindwardData();
+
+    // Open = latest Windward day >= 75% of pre-crisis average
+    const isOpen = windward?.latest
+      ? windward.latest.total >= status.avgPreCrisis * 0.5
+      : false;
+
+    return NextResponse.json({ ...status, isOpen, polymarket, windward }, {
       headers: {
-        // Cache at edge for 1 hour, serve stale for up to 24 hours while revalidating
         "Cache-Control": "s-maxage=3600, stale-while-revalidate=86400",
       },
     });

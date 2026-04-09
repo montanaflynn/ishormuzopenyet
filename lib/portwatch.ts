@@ -18,6 +18,26 @@ export interface PolymarketOdds {
   url: string;
 }
 
+export interface WindwardDay {
+  date: string;
+  inbound: number;
+  outbound: number;
+  total: number;
+  inboundAIS?: number;
+  inboundDark?: number;
+  outboundAIS?: number;
+  outboundDark?: number;
+  vesselsInGulf?: number;
+  darkEvents?: number;
+}
+
+export interface WindwardData {
+  fetchedAt: string;
+  source: string;
+  days: WindwardDay[];
+  latest: WindwardDay | null;
+}
+
 export interface StraitStatus {
   isOpen: boolean;
   latest: DailyTransit;
@@ -26,8 +46,10 @@ export interface StraitStatus {
   avgLast30: number;
   avgLast90: number;
   avgLast365: number;
+  avgPreCrisis: number;
   lastUpdated: string;
   polymarket?: PolymarketOdds | null;
+  windward?: WindwardData | null;
 }
 
 const ARCGIS_URL =
@@ -84,9 +106,12 @@ export async function getStraitStatus(): Promise<StraitStatus> {
   const avgLast90 = avg(days.slice(0, 90));
   const avgLast365 = avg(days);
 
-  // "Open" = latest day has meaningful traffic (> 25% of 365-day average)
-  const threshold = avgLast365 * 0.25;
-  const isOpen = latest.total >= threshold;
+  // Pre-crisis average: days before Feb 25, 2026
+  const preCrisisDays = days.filter((d) => d.date < "2026-02-25");
+  const avgPreCrisis = preCrisisDays.length > 0 ? avg(preCrisisDays) : avgLast365;
+
+  // "Open" = latest day has meaningful traffic (>= 75% of pre-crisis average)
+  const isOpen = latest.total >= avgPreCrisis * 0.5;
 
   return {
     isOpen,
@@ -96,6 +121,7 @@ export async function getStraitStatus(): Promise<StraitStatus> {
     avgLast30,
     avgLast90,
     avgLast365,
+    avgPreCrisis,
     lastUpdated: new Date().toISOString(),
   };
 }

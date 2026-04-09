@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "fetch-ships": "node scripts/fetch-ships.mjs",
+    "fetch-crossings": "node scripts/fetch-crossings.mjs",
+    "fetch-data": "node scripts/fetch-crossings.mjs && node scripts/fetch-ships.mjs"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
@@ -22,6 +25,9 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
+    "puppeteer": "^24.40.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
