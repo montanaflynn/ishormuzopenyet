@@ -3,13 +3,11 @@ import { getStraitStatus } from "@/lib/portwatch";
 import { getPolymarketOdds } from "@/lib/polymarket";
 import { getWindwardData } from "@/lib/windward";
 
-export async function GET() {
+export function GET() {
   try {
-    const [polymarket] = await Promise.all([
-      getPolymarketOdds(),
-    ]);
     const status = getStraitStatus();
     const windward = getWindwardData();
+    const polymarket = getPolymarketOdds();
 
     // Open = latest Windward day >= 75% of pre-crisis average
     const isOpen = windward?.latest

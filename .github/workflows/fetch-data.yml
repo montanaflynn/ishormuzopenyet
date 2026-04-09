@@ -23,6 +23,9 @@ jobs:
       - name: Fetch PortWatch transit data
         run: npm run fetch-portwatch
 
+      - name: Fetch Polymarket odds
+        run: npm run fetch-polymarket
+
       - name: Fetch crossing data from Windward
         run: npm run fetch-crossings
 
