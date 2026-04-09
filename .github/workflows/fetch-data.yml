@@ -20,6 +20,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Fetch PortWatch transit data
+        run: npm run fetch-portwatch
+
       - name: Fetch crossing data from Windward
         run: npm run fetch-crossings
 

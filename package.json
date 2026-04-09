@@ -9,7 +9,8 @@
     "lint": "eslint",
     "fetch-ships": "node scripts/fetch-ships.mjs",
     "fetch-crossings": "node scripts/fetch-crossings.mjs",
-    "fetch-data": "node scripts/fetch-crossings.mjs && node scripts/fetch-ships.mjs"
+    "fetch-portwatch": "node scripts/fetch-portwatch.mjs",
+    "fetch-data": "node scripts/fetch-portwatch.mjs && node scripts/fetch-crossings.mjs && node scripts/fetch-ships.mjs"
   },
   "dependencies": {
     "leaflet": "^1.9.4",

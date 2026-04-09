@@ -5,10 +5,10 @@ import { getWindwardData } from "@/lib/windward";
 
 export async function GET() {
   try {
-    const [status, polymarket] = await Promise.all([
-      getStraitStatus(),
+    const [polymarket] = await Promise.all([
       getPolymarketOdds(),
     ]);
+    const status = getStraitStatus();
     const windward = getWindwardData();
 
     // Open = latest Windward day >= 75% of pre-crisis average

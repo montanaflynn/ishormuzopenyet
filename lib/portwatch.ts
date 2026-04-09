@@ -52,48 +52,19 @@ export interface StraitStatus {
   windward?: WindwardData | null;
 }
 
-const ARCGIS_URL =
-  "https://services9.arcgis.com/weJ1QsnbMYJlCHdG/arcgis/rest/services/Daily_Chokepoints_Data/FeatureServer/0/query";
+import fs from "fs";
+import path from "path";
 
-function parseFeature(attrs: Record<string, unknown>): DailyTransit {
-  const ts = attrs.date as number;
-  return {
-    date: new Date(ts).toISOString().split("T")[0],
-    total: (attrs.n_total as number) ?? 0,
-    tanker: (attrs.n_tanker as number) ?? 0,
-    container: (attrs.n_container as number) ?? 0,
-    dryBulk: (attrs.n_dry_bulk as number) ?? 0,
-    generalCargo: (attrs.n_general_cargo as number) ?? 0,
-    roro: (attrs.n_roro as number) ?? 0,
-    capacity: (attrs.capacity as number) ?? 0,
-  };
-}
+const DATA_PATH = path.join(process.cwd(), "public/data/portwatch.json");
 
 function avg(days: DailyTransit[]): number {
   if (days.length === 0) return 0;
   return Math.round((days.reduce((s, d) => s + d.total, 0) / days.length) * 10) / 10;
 }
 
-export async function getStraitStatus(): Promise<StraitStatus> {
-  // Fetch last 365 days (maxRecordCountFactor=5 allows up to 5000)
-  const params = new URLSearchParams({
-    where: "portid='chokepoint6'",
-    outFields: "*",
-    orderByFields: "date DESC",
-    resultRecordCount: "365",
-    maxRecordCountFactor: "5",
-    f: "json",
-  });
-
-  const res = await fetch(`${ARCGIS_URL}?${params}`, {
-    next: { revalidate: 3600 },
-  });
-  const data = await res.json();
-  const features = data.features ?? [];
-
-  const days: DailyTransit[] = features.map(
-    (f: { attributes: Record<string, unknown> }) => parseFeature(f.attributes)
-  );
+export function getStraitStatus(): StraitStatus {
+  const raw = JSON.parse(fs.readFileSync(DATA_PATH, "utf-8"));
+  const days: DailyTransit[] = raw.days;
 
   const latest = days[0] ?? {
     date: new Date().toISOString().split("T")[0],
