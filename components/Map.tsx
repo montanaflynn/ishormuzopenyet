@@ -20,7 +20,7 @@ export default function Map() {
       center: CENTER,
       zoom: ZOOM,
       zoomControl: false,
-      attributionControl: false,
+      attributionControl: true,
       minZoom: 7,
       maxZoom: 11,
     });
@@ -31,7 +31,10 @@ export default function Map() {
     // CartoDB Dark Matter — no labels
     L.tileLayer(
       "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
-      { subdomains: "abcd" }
+      {
+        subdomains: "abcd",
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      }
     ).addTo(map);
 
     // Country labels
