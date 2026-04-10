@@ -310,7 +310,8 @@ export default function Map() {
       .then((raw: { capturedAt?: string; data: { rows: Record<string, string | null>[] } }) => {
         if (cancelled) return;
 
-        const capturedAtMs = raw.capturedAt ? new Date(raw.capturedAt).getTime() : null;
+        const capturedAtMs = raw.capturedAt ? new Date(raw.capturedAt).getTime() : Date.now();
+        const captureAgeMin = Math.max(0, (Date.now() - capturedAtMs) / 60_000);
 
         const parsedShips: Ship[] = raw.data.rows
           .filter((r) => {
@@ -376,19 +377,19 @@ export default function Map() {
             if (ship.speed > 0) rows.push(`<div class="ship-tip-meta">Speed: ${speedKnots} kn</div>`);
             if (ship.length && ship.width) rows.push(`<div class="ship-tip-meta">Size: ${ship.length}m by ${ship.width}m</div>`);
 
-            const shipUpdateMs = capturedAtMs != null && ship.elapsed != null
-              ? capturedAtMs - ship.elapsed * 60_000
-              : null;
-            const updatedAtLabel = shipUpdateMs != null
-              ? new Date(shipUpdateMs).toLocaleString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                  timeZoneName: "short",
-                })
-              : null;
-            if (updatedAtLabel) rows.push(`<div class="ship-tip-meta">Updated at: ${updatedAtLabel}</div>`);
+            const totalMin = ship.elapsed != null ? ship.elapsed + captureAgeMin : null;
+            const fmtAgo = (m: number) => {
+              if (m < 1) return "just now";
+              if (m < 60) return `${Math.round(m)}m ago`;
+              const h = Math.floor(m / 60);
+              const mm = Math.round(m % 60);
+              if (h < 24) return mm > 0 ? `${h}h ${mm}m ago` : `${h}h ago`;
+              const d = Math.floor(h / 24);
+              const hh = h % 24;
+              return hh > 0 ? `${d}d ${hh}h ago` : `${d}d ago`;
+            };
+            const elapsedLabel = totalMin != null ? fmtAgo(totalMin) : null;
+            if (elapsedLabel) rows.push(`<div class="ship-tip-meta">Updated: ${elapsedLabel}</div>`);
 
             rows.push(`<div class="ship-tip-elapsed">via MarineTraffic.com</div>`);
 
@@ -428,7 +429,7 @@ export default function Map() {
     <div className="relative h-full w-full">
       <div ref={mapRef} className="h-full w-full" />
 
-      <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-2 max-h-[calc(100vh-1.5rem)]">
+      <div className="absolute top-3 right-3 z-[1000] hidden md:flex flex-col gap-2 max-h-[calc(100vh-1.5rem)]">
         <div className="w-[260px] bg-black/85 backdrop-blur-sm text-white font-mono text-[11px] rounded-lg border border-white/15 shadow-xl select-text flex-shrink-0 overflow-hidden">
           <button
             onClick={() => setDebugVisible((v) => !v)}
