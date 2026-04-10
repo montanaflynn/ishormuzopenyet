@@ -6,7 +6,7 @@ import "leaflet/dist/leaflet.css";
 import type { Ship } from "@/lib/types";
 import { SHIP_TYPE_BUCKETS, shipTypeBucket, shipTypeLabel, FLAG_NAMES, AGE_BUCKETS, ageBucket, MAX_ELAPSED_MINUTES } from "@/lib/types";
 
-const CENTER: L.LatLngExpression = [26.28972, 55.89157];
+const CENTER: L.LatLngExpression = [26.36111, 56.17722];
 const ZOOM = 9;
 
 const parseExcludeParam = (name: string): Set<string> => {
@@ -157,7 +157,10 @@ export default function Map() {
     setExcludedFlags(flags);
     setExcludedTypes(types);
     setExcludedAges(ages);
-    if (flags.size > 0 || types.size > 0 || ages.size > 0) setFilterVisible(true);
+    const h = window.innerHeight;
+    const hasFilters = flags.size > 0 || types.size > 0 || ages.size > 0;
+    if (hasFilters || h > 850) setFilterVisible(true);
+    if (h > 1100) setDebugVisible(true);
     setHydratedFromUrl(true);
   }, []);
 
@@ -247,7 +250,7 @@ export default function Map() {
 
     // Country labels
     const COUNTRIES = [
-      { name: "IRAN", lat: 27.5, lng: 56.5 },
+      { name: "IRAN", lat: 27.5, lng: 56.3 },
       { name: "OMAN", lat: 26.1, lng: 56.3 },
       { name: "UAE", lat: 24.0, lng: 54.5 },
       { name: "SAUDI ARABIA", lat: 24.5, lng: 44.5 },
