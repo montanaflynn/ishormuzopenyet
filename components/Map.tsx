@@ -6,13 +6,15 @@ import "leaflet/dist/leaflet.css";
 import type { Ship } from "@/lib/types";
 import { SHIP_TYPE_LABELS, FLAG_NAMES, AGE_BUCKETS, ageBucket, MAX_ELAPSED_MINUTES } from "@/lib/types";
 
-const CENTER: L.LatLngExpression = [26.6, 56.5];
+const CENTER: L.LatLngExpression = [26.28972, 55.89157];
 const ZOOM = 9;
 
 export default function Map() {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<L.Map | null>(null);
   const shipMarkersRef = useRef<{ marker: L.Marker; ship: Ship; idx: number }[]>([]);
+  const [debugVisible, setDebugVisible] = useState(false);
+  const [debugState, setDebugState] = useState({ lat: 26.28972, lng: 55.89157, zoom: 9 });
   const [filterVisible, setFilterVisible] = useState(false);
   const [flagsExpanded, setFlagsExpanded] = useState(false);
   const [excludedFlags, setExcludedFlags] = useState<Set<string>>(new Set());
@@ -24,6 +26,8 @@ export default function Map() {
     const flagCounts: Record<string, number> = {};
     const typeCounts: Record<string, number> = {};
     const ageCounts: Record<string, number> = {};
+    let moving = 0;
+    let totalSpeed = 0;
     ships.forEach((s) => {
       const flagKey = s.flag && s.flag !== "--" ? s.flag : "";
       const typeKey = s.shipType ?? "";
@@ -31,6 +35,10 @@ export default function Map() {
       flagCounts[flagKey] = (flagCounts[flagKey] ?? 0) + 1;
       typeCounts[typeKey] = (typeCounts[typeKey] ?? 0) + 1;
       ageCounts[ageKey] = (ageCounts[ageKey] ?? 0) + 1;
+      if (s.speed > 0) {
+        moving++;
+        totalSpeed += s.speed;
+      }
     });
     const flags = Object.entries(flagCounts)
       .map(([key, count]) => ({
@@ -51,7 +59,14 @@ export default function Map() {
       label: b.label,
       count: ageCounts[b.key] ?? 0,
     }));
-    return { total: ships.length, flags, types, ages };
+    return {
+      total: ships.length,
+      moving,
+      avgSpeed: moving > 0 ? totalSpeed / moving : 0,
+      flags,
+      types,
+      ages,
+    };
   }, [ships]);
 
   const visibleCount = useMemo(() => {
@@ -77,7 +92,8 @@ export default function Map() {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
-      if (e.key === "f" || e.key === "F") setFilterVisible((v) => !v);
+      if (e.key === "d" || e.key === "D") setDebugVisible((v) => !v);
+      else if (e.key === "f" || e.key === "F") setFilterVisible((v) => !v);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -110,6 +126,13 @@ export default function Map() {
 
     let cancelled = false;
     leafletMap.current = map;
+
+    const updateDebug = () => {
+      const c = map.getCenter();
+      setDebugState({ lat: c.lat, lng: c.lng, zoom: map.getZoom() });
+    };
+    updateDebug();
+    map.on("move zoom", updateDebug);
 
     // CartoDB Dark Matter — no labels
     L.tileLayer(
@@ -305,6 +328,48 @@ export default function Map() {
       <div ref={mapRef} className="h-full w-full" />
 
       <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-2 max-h-[calc(100vh-1.5rem)]">
+        <div className="w-[260px] bg-black/85 backdrop-blur-sm text-white font-mono text-[11px] rounded-lg border border-white/15 shadow-xl select-text flex-shrink-0 overflow-hidden">
+          <button
+            onClick={() => setDebugVisible((v) => !v)}
+            className={`w-full p-1 flex items-center justify-between uppercase tracking-[0.15em] text-[9px] text-white/50 hover:text-white/80 transition-colors ${debugVisible ? "border-b border-white/10" : ""}`}
+          >
+            <span>Debug</span>
+            <span className="text-white/30 normal-case tracking-normal">
+              {debugVisible ? "press d to hide" : "press d"}
+            </span>
+          </button>
+
+          {debugVisible && (
+            <>
+              <div className="p-1 space-y-1 border-b border-white/10">
+                <div className="flex justify-between gap-3">
+                  <span className="text-white/40">center</span>
+                  <span className="tabular-nums">[{debugState.lat.toFixed(5)}, {debugState.lng.toFixed(5)}]</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-white/40">zoom</span>
+                  <span className="tabular-nums">{debugState.zoom}</span>
+                </div>
+              </div>
+
+              <div className="p-1 space-y-1">
+                <div className="flex justify-between gap-3">
+                  <span className="text-white/40">ships</span>
+                  <span className="tabular-nums">{stats.total}</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-white/40">moving</span>
+                  <span className="tabular-nums">{stats.moving}</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-white/40">avg speed</span>
+                  <span className="tabular-nums">{stats.avgSpeed.toFixed(1)} kn</span>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
         <div className={`w-[260px] min-h-0 flex flex-col bg-black/85 backdrop-blur-sm text-white font-mono text-[11px] rounded-lg border border-white/15 shadow-xl select-none overflow-hidden ${filterVisible ? "flex-1" : "flex-shrink-0"}`}>
           <button
             onClick={() => setFilterVisible((v) => !v)}
