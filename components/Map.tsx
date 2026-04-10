@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Ship } from "@/lib/types";
-import { SHIP_TYPE_LABELS, FLAG_NAMES } from "@/lib/types";
+import { SHIP_TYPE_LABELS, FLAG_NAMES, AGE_BUCKETS, ageBucket, MAX_ELAPSED_MINUTES } from "@/lib/types";
 
 const CENTER: L.LatLngExpression = [26.6, 56.5];
 const ZOOM = 9;
@@ -12,6 +12,89 @@ const ZOOM = 9;
 export default function Map() {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<L.Map | null>(null);
+  const shipMarkersRef = useRef<{ marker: L.Marker; ship: Ship; idx: number }[]>([]);
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [flagsExpanded, setFlagsExpanded] = useState(false);
+  const [excludedFlags, setExcludedFlags] = useState<Set<string>>(new Set());
+  const [excludedTypes, setExcludedTypes] = useState<Set<string>>(new Set());
+  const [excludedAges, setExcludedAges] = useState<Set<string>>(new Set());
+  const [ships, setShips] = useState<Ship[]>([]);
+
+  const stats = useMemo(() => {
+    const flagCounts: Record<string, number> = {};
+    const typeCounts: Record<string, number> = {};
+    const ageCounts: Record<string, number> = {};
+    ships.forEach((s) => {
+      const flagKey = s.flag && s.flag !== "--" ? s.flag : "";
+      const typeKey = s.shipType ?? "";
+      const ageKey = ageBucket(s.elapsed);
+      flagCounts[flagKey] = (flagCounts[flagKey] ?? 0) + 1;
+      typeCounts[typeKey] = (typeCounts[typeKey] ?? 0) + 1;
+      ageCounts[ageKey] = (ageCounts[ageKey] ?? 0) + 1;
+    });
+    const flags = Object.entries(flagCounts)
+      .map(([key, count]) => ({
+        key,
+        label: key ? (FLAG_NAMES[key] ?? key) : "Unknown",
+        count,
+      }))
+      .sort((a, b) => b.count - a.count);
+    const types = Object.entries(typeCounts)
+      .map(([key, count]) => ({
+        key,
+        label: key ? (SHIP_TYPE_LABELS[key] ?? `Type ${key}`) : "Unknown",
+        count,
+      }))
+      .sort((a, b) => b.count - a.count);
+    const ages = AGE_BUCKETS.map((b) => ({
+      key: b.key,
+      label: b.label,
+      count: ageCounts[b.key] ?? 0,
+    }));
+    return { total: ships.length, flags, types, ages };
+  }, [ships]);
+
+  const visibleCount = useMemo(() => {
+    return ships.filter((s) => {
+      const flagKey = s.flag && s.flag !== "--" ? s.flag : "";
+      const typeKey = s.shipType ?? "";
+      const ageKey = ageBucket(s.elapsed);
+      return !excludedFlags.has(flagKey) && !excludedTypes.has(typeKey) && !excludedAges.has(ageKey);
+    }).length;
+  }, [ships, excludedFlags, excludedTypes, excludedAges]);
+
+  const toggleKey = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, key: string) => {
+    setter((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      if (e.key === "f" || e.key === "F") setFilterVisible((v) => !v);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  useEffect(() => {
+    const map = leafletMap.current;
+    if (!map) return;
+    shipMarkersRef.current.forEach(({ marker, ship }) => {
+      const flagKey = ship.flag && ship.flag !== "--" ? ship.flag : "";
+      const typeKey = ship.shipType ?? "";
+      const ageKey = ageBucket(ship.elapsed);
+      const show = !excludedFlags.has(flagKey) && !excludedTypes.has(typeKey) && !excludedAges.has(ageKey);
+      if (show && !map.hasLayer(marker)) marker.addTo(map);
+      else if (!show && map.hasLayer(marker)) marker.remove();
+    });
+  }, [excludedFlags, excludedTypes, excludedAges]);
 
   useEffect(() => {
     if (!mapRef.current || leafletMap.current) return;
@@ -104,8 +187,12 @@ export default function Map() {
 
         const capturedAtMs = raw.capturedAt ? new Date(raw.capturedAt).getTime() : null;
 
-        const ships: Ship[] = raw.data.rows
-          .filter((r) => r.LAT && r.LON && !r.SHIPNAME?.includes("[SAT-AIS]"))
+        const parsedShips: Ship[] = raw.data.rows
+          .filter((r) => {
+            if (!r.LAT || !r.LON || r.SHIPNAME?.includes("[SAT-AIS]")) return false;
+            const e = r.ELAPSED ? parseInt(r.ELAPSED) : NaN;
+            return Number.isFinite(e) && e <= MAX_ELAPSED_MINUTES;
+          })
           .map((r) => ({
             mmsi: 0,
             name: r.SHIPNAME ?? "",
@@ -122,7 +209,7 @@ export default function Map() {
             elapsed: r.ELAPSED ? parseInt(r.ELAPSED) : undefined,
           }));
 
-        const shipMarkers: { marker: L.Marker; ship: Ship; idx: number }[] = [];
+        shipMarkersRef.current = [];
 
         const sizeForZoom = (zoom: number) => 10 + Math.max(0, zoom - 7) * 3;
 
@@ -140,7 +227,7 @@ export default function Map() {
           });
         };
 
-        ships.forEach((ship, idx) => {
+        parsedShips.forEach((ship, idx) => {
           const marker = L.marker([ship.lat, ship.lng], {
             icon: buildShipIcon(ship, idx, sizeForZoom(map.getZoom())),
             interactive: true,
@@ -191,13 +278,15 @@ export default function Map() {
             }
           }
 
-          shipMarkers.push({ marker, ship, idx });
+          shipMarkersRef.current.push({ marker, ship, idx });
           marker.addTo(map);
         });
 
+        setShips(parsedShips);
+
         map.on("zoomend", () => {
           const size = sizeForZoom(map.getZoom());
-          shipMarkers.forEach(({ marker, ship, idx }) => {
+          shipMarkersRef.current.forEach(({ marker, ship, idx }) => {
             marker.setIcon(buildShipIcon(ship, idx, size));
           });
         });
@@ -211,5 +300,179 @@ export default function Map() {
     };
   }, []);
 
-  return <div ref={mapRef} className="h-full w-full" />;
+  return (
+    <div className="relative h-full w-full">
+      <div ref={mapRef} className="h-full w-full" />
+
+      <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-2 max-h-[calc(100vh-1.5rem)]">
+        <div className={`w-[260px] min-h-0 flex flex-col bg-black/85 backdrop-blur-sm text-white font-mono text-[11px] rounded-lg border border-white/15 shadow-xl select-none overflow-hidden ${filterVisible ? "flex-1" : "flex-shrink-0"}`}>
+          <button
+            onClick={() => setFilterVisible((v) => !v)}
+            className={`w-full p-1 flex items-center justify-between uppercase tracking-[0.15em] text-[9px] text-white/50 hover:text-white/80 transition-colors ${filterVisible ? "border-b border-white/10" : ""}`}
+          >
+            <span className="flex items-center gap-2">
+              <span>Filters</span>
+              {filterVisible && stats.total > 0 && (
+                <span className="normal-case tracking-normal tabular-nums text-white/40">
+                  <span className="text-[#e2b553]">{visibleCount}</span>
+                  <span> / {stats.total}</span>
+                </span>
+              )}
+            </span>
+            <span className="text-white/30 normal-case tracking-normal">
+              {filterVisible ? "press f to hide" : "press f"}
+            </span>
+          </button>
+
+          {filterVisible && (
+            <div
+              className="overflow-y-auto flex-1 divide-y divide-white/10 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/15 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/25"
+              style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.15) transparent" }}
+            >
+              <div className="p-1">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-white/40 uppercase tracking-[0.15em] text-[9px]">Ship Type</span>
+                  <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-wider">
+                    <button
+                      onClick={() => setExcludedTypes(new Set())}
+                      className="text-white/40 hover:text-white"
+                    >
+                      all
+                    </button>
+                    <span className="text-white/15">|</span>
+                    <button
+                      onClick={() => setExcludedTypes(new Set(stats.types.map((t) => t.key)))}
+                      className="text-white/40 hover:text-white"
+                    >
+                      none
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-px">
+                  {stats.types.map((t) => {
+                    const checked = !excludedTypes.has(t.key);
+                    return (
+                      <label
+                        key={t.key || "unknown"}
+                        className="flex items-center gap-2 px-1 py-1 rounded hover:bg-white/5 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleKey(setExcludedTypes, t.key)}
+                          className="accent-[#e2b553] w-3 h-3"
+                        />
+                        <span className={`flex-1 truncate ${checked ? "text-white" : "text-white/30"}`}>{t.label}</span>
+                        <span className="tabular-nums text-white/40">{t.count}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="p-1">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-white/40 uppercase tracking-[0.15em] text-[9px]">Position Age</span>
+                  <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-wider">
+                    <button
+                      onClick={() => setExcludedAges(new Set())}
+                      className="text-white/40 hover:text-white"
+                    >
+                      all
+                    </button>
+                    <span className="text-white/15">|</span>
+                    <button
+                      onClick={() => setExcludedAges(new Set(stats.ages.map((a) => a.key)))}
+                      className="text-white/40 hover:text-white"
+                    >
+                      none
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-px">
+                  {stats.ages.map((a) => {
+                    const checked = !excludedAges.has(a.key);
+                    return (
+                      <label
+                        key={a.key || "unknown"}
+                        className="flex items-center gap-2 px-1 py-1 rounded hover:bg-white/5 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleKey(setExcludedAges, a.key)}
+                          className="accent-[#e2b553] w-3 h-3"
+                        />
+                        <span className={`flex-1 truncate ${checked ? "text-white" : "text-white/30"}`}>{a.label}</span>
+                        <span className="tabular-nums text-white/40">{a.count}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="p-1">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-white/40 uppercase tracking-[0.15em] text-[9px]">Flag</span>
+                  <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-wider">
+                    <button
+                      onClick={() => setExcludedFlags(new Set())}
+                      className="text-white/40 hover:text-white"
+                    >
+                      all
+                    </button>
+                    <span className="text-white/15">|</span>
+                    <button
+                      onClick={() => setExcludedFlags(new Set(stats.flags.map((f) => f.key)))}
+                      className="text-white/40 hover:text-white"
+                    >
+                      none
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-px">
+                  {(flagsExpanded ? stats.flags : stats.flags.slice(0, 20)).map((f) => {
+                    const checked = !excludedFlags.has(f.key);
+                    return (
+                      <label
+                        key={f.key || "unknown"}
+                        className="flex items-center gap-2 px-1 py-1 rounded hover:bg-white/5 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleKey(setExcludedFlags, f.key)}
+                          className="accent-[#e2b553] w-3 h-3"
+                        />
+                        {f.key ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={`https://flagcdn.com/w20/${f.key.toLowerCase()}.png`}
+                            alt=""
+                            className="w-4 h-3 object-cover border border-white/10 flex-shrink-0"
+                          />
+                        ) : (
+                          <span className="w-4 h-3 border border-white/10 bg-white/5 flex-shrink-0" />
+                        )}
+                        <span className={`flex-1 truncate ${checked ? "text-white" : "text-white/30"}`}>{f.label}</span>
+                        <span className="tabular-nums text-white/40">{f.count}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {stats.flags.length > 20 && (
+                  <button
+                    onClick={() => setFlagsExpanded((v) => !v)}
+                    className="w-full mt-1 px-1 py-1 text-[9px] uppercase tracking-wider text-white/40 hover:text-white/80 text-center"
+                  >
+                    {flagsExpanded ? "show less" : `show ${stats.flags.length - 20} more`}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }

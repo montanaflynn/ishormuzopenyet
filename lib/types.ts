@@ -14,6 +14,22 @@ export interface Ship {
   elapsed?: number;
 }
 
+export const MAX_ELAPSED_MINUTES = 360;
+
+export const AGE_BUCKETS: { key: string; label: string; max: number }[] = [
+  { key: "1h", label: "≤ 1 hr", max: 60 },
+  { key: "3h", label: "1 – 3 hr", max: 180 },
+  { key: "6h", label: "3 – 6 hr", max: MAX_ELAPSED_MINUTES },
+];
+
+export const ageBucket = (elapsed: number | undefined): string => {
+  if (elapsed == null || !Number.isFinite(elapsed)) return "";
+  for (const b of AGE_BUCKETS) {
+    if (elapsed <= b.max) return b.key;
+  }
+  return "";
+};
+
 export const SHIP_TYPE_LABELS: Record<string, string> = {
   "1": "Vessel",
   "3": "Fishing",
