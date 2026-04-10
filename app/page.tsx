@@ -276,7 +276,7 @@ export default function Home() {
                       <div className="relative text-[10px] mt-1">
                         <div className="flex justify-between text-white/45">
                           <span>{current} crossings</span>
-                          <span>{avg} avg</span>
+                          <span>pre-war avg {avg}</span>
                         </div>
                         <div className="absolute top-0 text-green-400/50" style={{ left: `${thresholdPct}%`, transform: "translateX(-50%)" }}>
                           {threshold} to be considered open
