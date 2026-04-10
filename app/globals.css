@@ -1,9 +1,11 @@
 @import "tailwindcss";
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 }
 
 html, body, #__next, .leaflet-tile-pane {
@@ -40,91 +42,75 @@ html, body, #__next, .leaflet-tile-pane {
 .ship-marker {
   background: none !important;
   border: none !important;
+  outline: none !important;
 }
 
-/* Ship tooltips */
+.ship-marker:focus,
+.ship-marker:focus-visible,
+.leaflet-marker-icon:focus,
+.leaflet-marker-icon:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Ship tooltips — matches filter/debug card styling */
 .ship-tooltip-rich {
-  background: rgba(20, 25, 35, 0.92) !important;
-  color: #ccc !important;
-  border: 1px solid rgba(226, 181, 83, 0.25) !important;
+  background: #0a0a0a !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
   font-size: 11px !important;
-  padding: 8px 10px !important;
-  border-radius: 6px !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
   line-height: 1.5 !important;
+  width: 220px !important;
   max-width: 220px !important;
+  white-space: normal !important;
 }
 
 .ship-tooltip-rich::before {
-  border-top-color: rgba(20, 25, 35, 0.92) !important;
+  border-top-color: #0a0a0a !important;
+}
+
+.ship-tip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
 .ship-tip-name {
   color: #e2b553;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 11px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ship-tip-flag-img {
+  width: 16px;
+  height: 12px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
 }
 
 .ship-tip-meta {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.6);
   font-size: 10px;
-}
-
-.ship-tip-details {
-  color: rgba(255, 255, 255, 0.45);
-  font-size: 10px;
-}
-
-.ship-tip-dest {
-  color: rgba(255, 255, 255, 0.4);
-  font-size: 10px;
-  font-style: italic;
 }
 
 .ship-tip-elapsed {
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.35);
   font-size: 9px;
-  margin-top: 2px;
-}
-
-.ship-tip-elapsed a {
-  color: rgba(226, 181, 83, 0.6);
-  text-decoration: none;
-}
-
-.ship-tip-elapsed a:hover {
-  color: #e2b553;
-  text-decoration: underline;
-}
-
-/* Ship popup (pinned on click) */
-.ship-popup-rich .leaflet-popup-content-wrapper {
-  background: rgba(20, 25, 35, 0.95) !important;
-  color: #ccc !important;
-  border: 1px solid rgba(226, 181, 83, 0.25) !important;
-  border-radius: 6px !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
-  padding: 0 !important;
-}
-
-.ship-popup-rich .leaflet-popup-content {
-  margin: 8px 10px !important;
-  font-size: 11px !important;
-  line-height: 1.5 !important;
-}
-
-.ship-popup-rich .leaflet-popup-tip {
-  background: rgba(20, 25, 35, 0.95) !important;
-}
-
-.ship-popup-rich .leaflet-popup-close-button {
-  color: rgba(255, 255, 255, 0.4) !important;
-  font-size: 16px !important;
-  padding: 4px 6px 0 0 !important;
-}
-
-.ship-popup-rich .leaflet-popup-close-button:hover {
-  color: #e2b553 !important;
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Leaflet attribution — ensure visible */

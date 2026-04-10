@@ -11,6 +11,7 @@ export interface Ship {
   length?: number;
   width?: number;
   shipType?: string;
+  elapsed?: number;
 }
 
 export const SHIP_TYPE_LABELS: Record<string, string> = {

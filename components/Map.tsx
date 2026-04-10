@@ -102,9 +102,7 @@ export default function Map() {
       .then((raw: { capturedAt?: string; data: { rows: Record<string, string | null>[] } }) => {
         if (cancelled) return;
 
-        const capturedLabel = raw.capturedAt
-          ? new Date(raw.capturedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "UTC", timeZoneName: "short" })
-          : null;
+        const capturedAtMs = raw.capturedAt ? new Date(raw.capturedAt).getTime() : null;
 
         const ships: Ship[] = raw.data.rows
           .filter((r) => r.LAT && r.LON && !r.SHIPNAME?.includes("[SAT-AIS]"))
@@ -121,41 +119,66 @@ export default function Map() {
             length: r.LENGTH ? parseInt(r.LENGTH) : undefined,
             width: r.WIDTH ? parseInt(r.WIDTH) : undefined,
             shipType: r.SHIPTYPE ?? undefined,
+            elapsed: r.ELAPSED ? parseInt(r.ELAPSED) : undefined,
           }));
 
-        let pinnedMarker: L.Marker | null = null;
+        const shipMarkers: { marker: L.Marker; ship: Ship; idx: number }[] = [];
 
-        ships.forEach((ship) => {
+        const sizeForZoom = (zoom: number) => 10 + Math.max(0, zoom - 7) * 3;
+
+        const buildShipIcon = (ship: Ship, idx: number, size: number) => {
           const heading = ship.heading ?? 0;
+          const flagCode = ship.flag && ship.flag !== "--" ? ship.flag.toLowerCase() : null;
+          const html = flagCode
+            ? `<svg width="${size}" height="${size}" viewBox="0 0 20 20" style="transform:rotate(${heading}deg)"><defs><clipPath id="ship-clip-${idx}"><polygon points="10,2 17,17 10,14 3,17"/></clipPath></defs><image href="https://flagcdn.com/w20/${flagCode}.png" x="0" y="0" width="20" height="20" clip-path="url(#ship-clip-${idx})" preserveAspectRatio="xMidYMid slice"/><polygon points="10,2 17,17 10,14 3,17" fill="none" stroke="#000" stroke-width="1"/></svg>`
+            : `<svg width="${size}" height="${size}" viewBox="0 0 20 20" style="transform:rotate(${heading}deg)"><polygon points="10,2 17,17 10,14 3,17" fill="#e2b553" fill-opacity="0.9" stroke="#000" stroke-width="1"/></svg>`;
+          return L.divIcon({
+            className: "ship-marker",
+            html,
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2],
+          });
+        };
+
+        ships.forEach((ship, idx) => {
           const marker = L.marker([ship.lat, ship.lng], {
-            icon: L.divIcon({
-              className: "ship-marker",
-              html: `<svg width="12" height="12" viewBox="0 0 12 12" style="transform:rotate(${heading}deg)"><polygon points="6,1 10,10 6,8 2,10" fill="#e2b553" fill-opacity="0.9" stroke="#000" stroke-width="0.5"/></svg>`,
-              iconSize: [12, 12],
-              iconAnchor: [6, 6],
-            }),
+            icon: buildShipIcon(ship, idx, sizeForZoom(map.getZoom())),
             interactive: true,
           });
 
           {
+            const flagCode = ship.flag && ship.flag !== "--" ? ship.flag.toLowerCase() : null;
             const flagName = ship.flag && ship.flag !== "--" ? (FLAG_NAMES[ship.flag] ?? ship.flag) : null;
             const typeName = ship.shipType ? (SHIP_TYPE_LABELS[ship.shipType] ?? "Vessel") : null;
             const speedKnots = ship.speed.toFixed(1);
 
             const rows: string[] = [];
-            if (ship.name) rows.push(`<div class="ship-tip-name">${ship.name}</div>`);
+            const nameHtml = ship.name ? `<span class="ship-tip-name">${ship.name}</span>` : "";
+            const flagImgHtml = flagCode ? `<img src="https://flagcdn.com/w20/${flagCode}.png" alt="" class="ship-tip-flag-img" />` : "";
+            if (nameHtml || flagImgHtml) {
+              rows.push(`<div class="ship-tip-header">${nameHtml}${flagImgHtml}</div>`);
+            }
 
             if (typeName) rows.push(`<div class="ship-tip-meta">Ship Type: ${typeName}</div>`);
             if (flagName) rows.push(`<div class="ship-tip-meta">Flag State: ${flagName}</div>`);
+            if (ship.speed > 0) rows.push(`<div class="ship-tip-meta">Speed: ${speedKnots} kn</div>`);
+            if (ship.length && ship.width) rows.push(`<div class="ship-tip-meta">Size: ${ship.length}m by ${ship.width}m</div>`);
 
-            const details: string[] = [];
-            if (ship.speed > 0) details.push(`Speed: ${speedKnots} kn`);
-            if (ship.length && ship.width) details.push(`Size: ${ship.length}m by ${ship.width}m`);
-            if (details.length) rows.push(`<div class="ship-tip-details">${details.join("<br/>")}</div>`);
+            const shipUpdateMs = capturedAtMs != null && ship.elapsed != null
+              ? capturedAtMs - ship.elapsed * 60_000
+              : null;
+            const updatedAtLabel = shipUpdateMs != null
+              ? new Date(shipUpdateMs).toLocaleString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                  timeZoneName: "short",
+                })
+              : null;
+            if (updatedAtLabel) rows.push(`<div class="ship-tip-meta">Updated at: ${updatedAtLabel}</div>`);
 
-            const mtLink = `<a href="https://www.marinetraffic.com/en/ais/home/centerx:57.4/centery:26.4/zoom:8" target="_blank" rel="noopener noreferrer">MarineTraffic</a>`;
-            const mtLabel = capturedLabel ? `Data from ${mtLink} on ${capturedLabel}` : `Data from ${mtLink}`;
-            if (mtLabel) rows.push(`<div class="ship-tip-elapsed">${mtLabel}</div>`);
+            rows.push(`<div class="ship-tip-elapsed">via MarineTraffic.com</div>`);
 
             if (rows.length) {
               const content = rows.join("");
@@ -165,41 +188,19 @@ export default function Map() {
                 direction: "top",
                 offset: [0, -8],
               });
-
-              marker.bindPopup(content, {
-                className: "ship-popup-rich",
-                closeButton: true,
-                offset: [0, -8],
-                maxWidth: 220,
-              });
-
-              marker.on("mouseover", () => {
-                if (!pinnedMarker) marker.openTooltip();
-              });
-
-              marker.on("mouseout", () => {
-                if (pinnedMarker !== marker) marker.closeTooltip();
-              });
-
-              marker.on("click", () => {
-                // close previous pinned popup
-                if (pinnedMarker && pinnedMarker !== marker) {
-                  pinnedMarker.closePopup();
-                }
-                marker.closeTooltip();
-                pinnedMarker = marker;
-                marker.openPopup();
-              });
-
-              marker.on("popupclose", () => {
-                if (pinnedMarker === marker) pinnedMarker = null;
-              });
             }
           }
 
+          shipMarkers.push({ marker, ship, idx });
           marker.addTo(map);
         });
 
+        map.on("zoomend", () => {
+          const size = sizeForZoom(map.getZoom());
+          shipMarkers.forEach(({ marker, ship, idx }) => {
+            marker.setIcon(buildShipIcon(ship, idx, size));
+          });
+        });
       })
       .catch(console.error);
 
