@@ -30,13 +30,36 @@ export const ageBucket = (elapsed: number | undefined): string => {
   return "";
 };
 
-export const SHIP_TYPE_LABELS: Record<string, string> = {
-  "1": "Vessel",
-  "3": "Fishing",
-  "6": "Passenger",
-  "7": "Cargo",
-  "8": "Tanker",
+export const SHIP_TYPE_BUCKETS: { key: string; label: string }[] = [
+  { key: "cargo", label: "Cargo" },
+  { key: "tanker", label: "Tanker" },
+  { key: "tugs-and-special", label: "Tugs & Special" },
+  { key: "pleasure", label: "Pleasure" },
+  { key: "passenger", label: "Passenger" },
+  { key: "fishing", label: "Fishing" },
+  { key: "other", label: "Other" },
+];
+
+const SHIPTYPE_TO_BUCKET: Record<string, string> = {
+  "7": "cargo",
+  "8": "tanker",
+  "3": "tugs-and-special",
+  "9": "pleasure",
+  "6": "passenger",
+  "2": "fishing",
 };
+
+export const shipTypeBucket = (shipType: string | undefined): string => {
+  if (shipType && SHIPTYPE_TO_BUCKET[shipType]) return SHIPTYPE_TO_BUCKET[shipType];
+  return "other";
+};
+
+const BUCKET_LABEL: Record<string, string> = Object.fromEntries(
+  SHIP_TYPE_BUCKETS.map((b) => [b.key, b.label])
+);
+
+export const shipTypeLabel = (shipType: string | undefined): string =>
+  BUCKET_LABEL[shipTypeBucket(shipType)];
 
 export const FLAG_NAMES: Record<string, string> = {
   AE: "UAE",

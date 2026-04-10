@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Ship } from "@/lib/types";
-import { SHIP_TYPE_LABELS, FLAG_NAMES, AGE_BUCKETS, ageBucket, MAX_ELAPSED_MINUTES } from "@/lib/types";
+import { SHIP_TYPE_BUCKETS, shipTypeBucket, shipTypeLabel, FLAG_NAMES, AGE_BUCKETS, ageBucket, MAX_ELAPSED_MINUTES } from "@/lib/types";
 
 const CENTER: L.LatLngExpression = [26.28972, 55.89157];
 const ZOOM = 9;
@@ -73,7 +73,7 @@ export default function Map() {
     let totalSpeed = 0;
     ships.forEach((s) => {
       const flagKey = s.flag && s.flag !== "--" ? s.flag : "";
-      const typeKey = s.shipType ?? "";
+      const typeKey = shipTypeBucket(s.shipType);
       const ageKey = ageBucket(s.elapsed);
       flagCounts[flagKey] = (flagCounts[flagKey] ?? 0) + 1;
       typeCounts[typeKey] = (typeCounts[typeKey] ?? 0) + 1;
@@ -90,12 +90,12 @@ export default function Map() {
         count,
       }))
       .sort((a, b) => b.count - a.count);
-    const types = Object.entries(typeCounts)
-      .map(([key, count]) => ({
-        key,
-        label: key ? (SHIP_TYPE_LABELS[key] ?? `Type ${key}`) : "Unknown",
-        count,
-      }))
+    const types = SHIP_TYPE_BUCKETS.map((b) => ({
+      key: b.key,
+      label: b.label,
+      count: typeCounts[b.key] ?? 0,
+    }))
+      .filter((t) => t.count > 0)
       .sort((a, b) => b.count - a.count);
     const ages = AGE_BUCKETS.map((b) => ({
       key: b.key,
@@ -115,7 +115,7 @@ export default function Map() {
   const visibleCount = useMemo(() => {
     return ships.filter((s) => {
       const flagKey = s.flag && s.flag !== "--" ? s.flag : "";
-      const typeKey = s.shipType ?? "";
+      const typeKey = shipTypeBucket(s.shipType);
       const ageKey = ageBucket(s.elapsed);
       return !excludedFlags.has(flagKey) && !excludedTypes.has(typeKey) && !excludedAges.has(ageKey);
     }).length;
@@ -134,7 +134,14 @@ export default function Map() {
     const handler = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      if (target) {
+        if (target.tagName === "TEXTAREA" || target.isContentEditable) return;
+        if (target.tagName === "INPUT") {
+          const type = (target as HTMLInputElement).type;
+          const textish = ["text", "search", "email", "url", "tel", "password", "number"];
+          if (textish.includes(type)) return;
+        }
+      }
       if (e.key === "d" || e.key === "D") setDebugVisible((v) => !v);
       else if (e.key === "f" || e.key === "F") setFilterVisible((v) => !v);
       else if (e.key === "r" || e.key === "R") resetAll();
@@ -144,9 +151,13 @@ export default function Map() {
   }, []);
 
   useEffect(() => {
-    setExcludedFlags(parseExcludeParam("exclude_flags"));
-    setExcludedTypes(parseExcludeParam("exclude_types"));
-    setExcludedAges(parseExcludeParam("exclude_ages"));
+    const flags = parseExcludeParam("exclude_flags");
+    const types = parseExcludeParam("exclude_types");
+    const ages = parseExcludeParam("exclude_ages");
+    setExcludedFlags(flags);
+    setExcludedTypes(types);
+    setExcludedAges(ages);
+    if (flags.size > 0 || types.size > 0 || ages.size > 0) setFilterVisible(true);
     setHydratedFromUrl(true);
   }, []);
 
@@ -169,7 +180,7 @@ export default function Map() {
     if (!map) return;
     shipMarkersRef.current.forEach(({ marker, ship }) => {
       const flagKey = ship.flag && ship.flag !== "--" ? ship.flag : "";
-      const typeKey = ship.shipType ?? "";
+      const typeKey = shipTypeBucket(ship.shipType);
       const ageKey = ageBucket(ship.elapsed);
       const show = !excludedFlags.has(flagKey) && !excludedTypes.has(typeKey) && !excludedAges.has(ageKey);
       if (show && !map.hasLayer(marker)) marker.addTo(map);
@@ -350,7 +361,7 @@ export default function Map() {
           {
             const flagCode = ship.flag && ship.flag !== "--" ? ship.flag.toLowerCase() : null;
             const flagName = ship.flag && ship.flag !== "--" ? (FLAG_NAMES[ship.flag] ?? ship.flag) : null;
-            const typeName = ship.shipType ? (SHIP_TYPE_LABELS[ship.shipType] ?? "Vessel") : null;
+            const typeName = ship.shipType ? shipTypeLabel(ship.shipType) : null;
             const speedKnots = ship.speed.toFixed(1);
 
             const rows: string[] = [];
