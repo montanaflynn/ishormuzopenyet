@@ -9,6 +9,30 @@ import { SHIP_TYPE_LABELS, FLAG_NAMES, AGE_BUCKETS, ageBucket, MAX_ELAPSED_MINUT
 const CENTER: L.LatLngExpression = [26.28972, 55.89157];
 const ZOOM = 9;
 
+const parseExcludeParam = (name: string): Set<string> => {
+  if (typeof window === "undefined") return new Set();
+  const v = new URLSearchParams(window.location.search).get(name);
+  if (!v) return new Set();
+  return new Set(v.split(",").map((x) => (x === "_" ? "" : x)));
+};
+
+const serializeExclude = (s: Set<string>) =>
+  Array.from(s)
+    .map((v) => (v === "" ? "_" : v))
+    .join(",");
+
+const parseMapStart = (): { center: L.LatLngExpression; zoom: number } => {
+  if (typeof window === "undefined") return { center: CENTER, zoom: ZOOM };
+  const p = new URLSearchParams(window.location.search);
+  const lat = parseFloat(p.get("lat") ?? "");
+  const lng = parseFloat(p.get("lng") ?? "");
+  const zoom = parseInt(p.get("zoom") ?? "");
+  return {
+    center: Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : CENTER,
+    zoom: Number.isFinite(zoom) ? zoom : ZOOM,
+  };
+};
+
 export default function Map() {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<L.Map | null>(null);
@@ -20,7 +44,26 @@ export default function Map() {
   const [excludedFlags, setExcludedFlags] = useState<Set<string>>(new Set());
   const [excludedTypes, setExcludedTypes] = useState<Set<string>>(new Set());
   const [excludedAges, setExcludedAges] = useState<Set<string>>(new Set());
+  const [hydratedFromUrl, setHydratedFromUrl] = useState(false);
   const [ships, setShips] = useState<Ship[]>([]);
+
+  const hasActiveFilters = excludedFlags.size > 0 || excludedTypes.size > 0 || excludedAges.size > 0;
+
+  const resetAll = () => {
+    setExcludedFlags(new Set());
+    setExcludedTypes(new Set());
+    setExcludedAges(new Set());
+    leafletMap.current?.setView(CENTER, ZOOM, { animate: false });
+    const params = new URLSearchParams(window.location.search);
+    params.delete("lat");
+    params.delete("lng");
+    params.delete("zoom");
+    params.delete("exclude_flags");
+    params.delete("exclude_types");
+    params.delete("exclude_ages");
+    const qs = params.toString();
+    window.history.replaceState(null, "", `${window.location.pathname}${qs ? "?" + qs : ""}${window.location.hash}`);
+  };
 
   const stats = useMemo(() => {
     const flagCounts: Record<string, number> = {};
@@ -94,10 +137,32 @@ export default function Map() {
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
       if (e.key === "d" || e.key === "D") setDebugVisible((v) => !v);
       else if (e.key === "f" || e.key === "F") setFilterVisible((v) => !v);
+      else if (e.key === "r" || e.key === "R") resetAll();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
+
+  useEffect(() => {
+    setExcludedFlags(parseExcludeParam("exclude_flags"));
+    setExcludedTypes(parseExcludeParam("exclude_types"));
+    setExcludedAges(parseExcludeParam("exclude_ages"));
+    setHydratedFromUrl(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydratedFromUrl) return;
+    const params = new URLSearchParams(window.location.search);
+    if (excludedFlags.size > 0) params.set("exclude_flags", serializeExclude(excludedFlags));
+    else params.delete("exclude_flags");
+    if (excludedTypes.size > 0) params.set("exclude_types", serializeExclude(excludedTypes));
+    else params.delete("exclude_types");
+    if (excludedAges.size > 0) params.set("exclude_ages", serializeExclude(excludedAges));
+    else params.delete("exclude_ages");
+    const qs = params.toString();
+    const url = `${window.location.pathname}${qs ? "?" + qs : ""}${window.location.hash}`;
+    window.history.replaceState(null, "", url);
+  }, [hydratedFromUrl, excludedFlags, excludedTypes, excludedAges]);
 
   useEffect(() => {
     const map = leafletMap.current;
@@ -110,14 +175,15 @@ export default function Map() {
       if (show && !map.hasLayer(marker)) marker.addTo(map);
       else if (!show && map.hasLayer(marker)) marker.remove();
     });
-  }, [excludedFlags, excludedTypes, excludedAges]);
+  }, [excludedFlags, excludedTypes, excludedAges, ships]);
 
   useEffect(() => {
     if (!mapRef.current || leafletMap.current) return;
 
+    const start = parseMapStart();
     const map = L.map(mapRef.current, {
-      center: CENTER,
-      zoom: ZOOM,
+      center: start.center,
+      zoom: start.zoom,
       zoomControl: false,
       attributionControl: true,
       minZoom: 7,
@@ -133,6 +199,31 @@ export default function Map() {
     };
     updateDebug();
     map.on("move zoom", updateDebug);
+
+    const updateMapUrl = () => {
+      if (typeof window === "undefined") return;
+      const params = new URLSearchParams(window.location.search);
+      const c = map.getCenter();
+      const z = map.getZoom();
+      const [dLat, dLng] = CENTER as [number, number];
+      const isDefault =
+        Math.abs(c.lat - dLat) < 0.0001 &&
+        Math.abs(c.lng - dLng) < 0.0001 &&
+        z === ZOOM;
+      if (isDefault) {
+        params.delete("lat");
+        params.delete("lng");
+        params.delete("zoom");
+      } else {
+        params.set("lat", c.lat.toFixed(5));
+        params.set("lng", c.lng.toFixed(5));
+        params.set("zoom", String(z));
+      }
+      const qs = params.toString();
+      const url = `${window.location.pathname}${qs ? "?" + qs : ""}${window.location.hash}`;
+      window.history.replaceState(null, "", url);
+    };
+    map.on("moveend zoomend", updateMapUrl);
 
     // CartoDB Dark Matter — no labels
     L.tileLayer(
@@ -302,7 +393,6 @@ export default function Map() {
           }
 
           shipMarkersRef.current.push({ marker, ship, idx });
-          marker.addTo(map);
         });
 
         setShips(parsedShips);
@@ -537,6 +627,18 @@ export default function Map() {
             </div>
           )}
         </div>
+
+        {hasActiveFilters && (
+          <button
+            onClick={resetAll}
+            className="w-[260px] bg-black/85 text-white font-mono text-[11px] rounded-lg border border-white/15 shadow-xl flex-shrink-0 overflow-hidden hover:border-white/25 transition-colors"
+          >
+            <div className="w-full p-1 flex items-center justify-between uppercase tracking-[0.15em] text-[9px] text-white/50">
+              <span>Reset</span>
+              <span className="text-white/30 normal-case tracking-normal">press r</span>
+            </div>
+          </button>
+        )}
       </div>
     </div>
   );
