@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-04-12T10:16:09.856Z",
+  "fetchedAt": "2026-04-12T11:14:10.266Z",
   "source": "https://insights.windward.ai/",
   "days": {
     "2026-04-02": {
@@ -61,6 +61,24 @@
       "outboundDark": 0,
       "vesselsInGulf": 799,
       "darkEvents": 268
+    },
+    "2026-04-10": {
+      "date": "2026-04-10",
+      "inbound": 5,
+      "outbound": 7,
+      "total": 12
+    },
+    "2026-04-11": {
+      "date": "2026-04-11",
+      "inbound": 7,
+      "outbound": 10,
+      "total": 17,
+      "inboundAIS": 6,
+      "inboundDark": 1,
+      "outboundAIS": 9,
+      "outboundDark": 1,
+      "vesselsInGulf": 624,
+      "darkEvents": 179
     }
   }
 }
